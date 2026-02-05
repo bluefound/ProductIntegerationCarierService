@@ -1,5 +1,17 @@
 # Carrier Integration Service
 
+
+Architecture
+RateRequest
+ICarrier Interface
+UPSCarrier
+OAuth Service
+HTTP Client
+Token Cache
+Error Handling
+
+
+
 A production grade TypeScript service for integrating with shipping carriers. Provides a unified interface for rate shopping, tracking, and label creation with an extensible architecture supporting multiple carriers.
 
 Architecture
