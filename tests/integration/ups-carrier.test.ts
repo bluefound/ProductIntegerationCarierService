@@ -22,6 +22,7 @@ import {
     validRateRequest,
     invalidRateRequest,
 } from '../fixtures/ups-responses.js';
+import { CarrierName } from '../../src/domain/enums.js';
 
 // Mock axios for all tests
 vi.mock('axios', async () => {
@@ -73,7 +74,7 @@ describe('UPSCarrier', () => {
         // Create real instances with mocked axios
         httpClient = new HttpClient({
             baseUrl: 'https://wwwcie.ups.com',
-            carrier: 'UPS',
+            carrier: CarrierName.UPS,
             timeoutMs: 30000,
         });
 
@@ -86,7 +87,7 @@ describe('UPSCarrier', () => {
             tokenUrl: 'https://wwwcie.ups.com/security/v1/oauth/token',
             clientId: 'test-client-id',
             clientSecret: 'test-client-secret',
-            carrier: 'UPS',
+            carrier: CarrierName.UPS,
             additionalHeaders: {
                 'x-merchant-id': '123456',
             },
@@ -233,7 +234,7 @@ describe('UPSCarrier', () => {
                 expect.fail('Should have thrown NotImplementedError');
             } catch (error) {
                 expect(error).toBeInstanceOf(NotImplementedError);
-                expect((error as NotImplementedError).carrier).toBe('UPS');
+                expect((error as NotImplementedError).carrier).toBe(CarrierName.UPS);
             }
         });
     });
@@ -246,7 +247,7 @@ describe('UPSCarrier', () => {
                     destination: validRateRequest.destination,
                     packages: validRateRequest.packages,
                     serviceCode: '03',
-                    carrier: 'UPS',
+                    carrier: CarrierName.UPS,
                 })
             ).rejects.toThrow(NotImplementedError);
         });
@@ -254,7 +255,7 @@ describe('UPSCarrier', () => {
 
     describe('carrier properties', () => {
         it('should have name set to UPS', () => {
-            expect(upsCarrier.name).toBe('UPS');
+            expect(upsCarrier.name).toBe(CarrierName.UPS);
         });
     });
 });
@@ -281,7 +282,7 @@ describe('OAuthService', () => {
             tokenUrl: 'https://wwwcie.ups.com/security/v1/oauth/token',
             clientId: 'test-client-id',
             clientSecret: 'test-client-secret',
-            carrier: 'UPS',
+            carrier: CarrierName.UPS,
             refreshBufferSeconds: 300,
         });
     });
@@ -481,7 +482,7 @@ describe('HttpClient', () => {
 
         httpClient = new HttpClient({
             baseUrl: 'https://api.example.com',
-            carrier: 'UPS',
+            carrier: CarrierName.UPS,
             timeoutMs: 30000,
         });
     });

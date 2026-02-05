@@ -9,7 +9,10 @@ import type {
     RateResponse,
     RateQuote,
     Surcharge,
-    CurrencyCode,
+} from '../../domain/types.js';
+import {
+    CarrierName,
+    parseCurrencyCode,
 } from '../../domain/types.js';
 import type {
     UPSRateRequest,
@@ -152,17 +155,6 @@ export function toUPSRateRequest(
 // =============================================================================
 
 /**
- * Parse UPS currency code to domain CurrencyCode.
- */
-function parseCurrencyCode(code: string): CurrencyCode {
-    const validCodes: CurrencyCode[] = ['USD', 'EUR', 'GBP', 'CAD'];
-    if (validCodes.includes(code as CurrencyCode)) {
-        return code as CurrencyCode;
-    }
-    return 'USD'; // Default to USD for unknown currencies
-}
-
-/**
  * Convert UPS RatedShipment to domain RateQuote.
  */
 export function fromUPSRatedShipment(rated: UPSRatedShipment): RateQuote {
@@ -211,7 +203,7 @@ export function fromUPSRatedShipment(rated: UPSRatedShipment): RateQuote {
     }
 
     return {
-        carrier: 'UPS',
+        carrier: CarrierName.UPS,
         serviceCode,
         serviceName,
         totalPrice: {
@@ -219,8 +211,8 @@ export function fromUPSRatedShipment(rated: UPSRatedShipment): RateQuote {
             currency: parseCurrencyCode(totalCharges.CurrencyCode),
         },
         basePrice: {
-            amount: parseFloat(baseCharges.MonetaryValue),
-            currency: parseCurrencyCode(baseCharges.CurrencyCode),
+            amount: parseFloat(baseCharges.MonetaryValue), // Assuming BaseServiceCharge or TransportationCharges has MonetaryValue
+            currency: parseCurrencyCode(baseCharges?.CurrencyCode ?? totalCharges.CurrencyCode),
         },
         surcharges,
         estimatedDeliveryDate,

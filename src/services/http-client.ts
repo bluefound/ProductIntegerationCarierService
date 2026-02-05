@@ -10,6 +10,7 @@ import axios, {
     InternalAxiosRequestConfig,
     AxiosResponse,
 } from 'axios';
+import { z } from 'zod';
 import {
     NetworkError,
     CarrierApiError,
@@ -58,6 +59,7 @@ const noopLogger: HttpLogger = {
  * - Request/response logging (optional)
  * - Timeout handling
  * - Rate limit detection
+ * - Type-safe response validation (Zod)
  */
 export class HttpClient {
     readonly client: AxiosInstance;
@@ -92,10 +94,14 @@ export class HttpClient {
     /**
      * Make a GET request.
      */
-    async get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
+    async get<T>(
+        url: string,
+        config?: AxiosRequestConfig,
+        responseSchema?: z.ZodSchema<T>
+    ): Promise<T> {
         try {
-            const response = await this.client.get<T>(url, config);
-            return response.data;
+            const response = await this.client.get(url, config);
+            return this.validateResponse(response.data, responseSchema);
         } catch (error) {
             throw this.transformError(error);
         }
@@ -104,10 +110,15 @@ export class HttpClient {
     /**
      * Make a POST request.
      */
-    async post<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
+    async post<T>(
+        url: string,
+        data?: unknown,
+        config?: AxiosRequestConfig,
+        responseSchema?: z.ZodSchema<T>
+    ): Promise<T> {
         try {
-            const response = await this.client.post<T>(url, data, config);
-            return response.data;
+            const response = await this.client.post(url, data, config);
+            return this.validateResponse(response.data, responseSchema);
         } catch (error) {
             throw this.transformError(error);
         }
@@ -116,10 +127,15 @@ export class HttpClient {
     /**
      * Make a PUT request.
      */
-    async put<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
+    async put<T>(
+        url: string,
+        data?: unknown,
+        config?: AxiosRequestConfig,
+        responseSchema?: z.ZodSchema<T>
+    ): Promise<T> {
         try {
-            const response = await this.client.put<T>(url, data, config);
-            return response.data;
+            const response = await this.client.put(url, data, config);
+            return this.validateResponse(response.data, responseSchema);
         } catch (error) {
             throw this.transformError(error);
         }
@@ -128,13 +144,39 @@ export class HttpClient {
     /**
      * Make a DELETE request.
      */
-    async delete<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
+    async delete<T>(
+        url: string,
+        config?: AxiosRequestConfig,
+        responseSchema?: z.ZodSchema<T>
+    ): Promise<T> {
         try {
-            const response = await this.client.delete<T>(url, config);
-            return response.data;
+            const response = await this.client.delete(url, config);
+            return this.validateResponse(response.data, responseSchema);
         } catch (error) {
             throw this.transformError(error);
         }
+    }
+
+    /**
+     * Validate response data against a Zod schema if provided.
+     */
+    private validateResponse<T>(data: unknown, schema?: z.ZodSchema<T>): T {
+        if (!schema) {
+            return data as T;
+        }
+
+        const result = schema.safeParse(data);
+        if (!result.success) {
+            throw new CarrierApiError('Invalid API response format', {
+                carrier: this.config.carrier,
+                responseBody: data,
+                context: {
+                    validationErrors: result.error.flatten(),
+                },
+            });
+        }
+
+        return result.data;
     }
 
     /**
@@ -284,20 +326,21 @@ export class HttpClient {
     /**
      * Extract error message from response body.
      */
-    private extractErrorMessage(data: Record<string, unknown> | undefined): string | undefined {
-        if (!data) return undefined;
+    private extractErrorMessage(data: unknown): string | undefined {
+        if (!data || typeof data !== 'object') return undefined;
+        const obj = data as Record<string, unknown>;
 
         // Common error message fields
         const messageFields = ['message', 'error', 'error_description', 'errorMessage'];
         for (const field of messageFields) {
-            if (typeof data[field] === 'string') {
-                return data[field];
+            if (typeof obj[field] === 'string') {
+                return obj[field] as string;
             }
         }
 
         // Handle nested errors
-        if (typeof data['errors'] === 'object' && data['errors'] !== null) {
-            const errors = data['errors'] as Record<string, unknown>;
+        if (typeof obj['errors'] === 'object' && obj['errors'] !== null) {
+            const errors = obj['errors'];
             if (Array.isArray(errors)) {
                 const firstError = errors[0];
                 if (typeof firstError === 'object' && firstError !== null) {

@@ -3,25 +3,39 @@
  * These types define the contract between the application and carrier implementations.
  */
 
-/**
- * Supported weight units for package weight measurement.
- */
-export type WeightUnit = 'LB' | 'KG';
+// Import enums for local use in interfaces
+import {
+    WeightUnit,
+    WeightUnitSchema,
+    DimensionUnit,
+    DimensionUnitSchema,
+    CurrencyCode,
+    CurrencyCodeSchema,
+    parseCurrencyCode,
+    CarrierName,
+    CarrierNameSchema,
+    PackagingType,
+    PackagingTypeSchema,
+    LabelFormat,
+    LabelFormatSchema,
+} from './enums.js';
 
-/**
- * Supported dimension units for package measurements.
- */
-export type DimensionUnit = 'IN' | 'CM';
-
-/**
- * Supported currency codes for monetary values.
- */
-export type CurrencyCode = 'USD' | 'EUR' | 'GBP' | 'CAD';
-
-/**
- * Carrier identifiers for supported shipping carriers.
- */
-export type CarrierName = 'UPS' | 'FEDEX' | 'USPS' | 'DHL';
+// Re-export all enums and schemas for consumers
+export {
+    WeightUnit,
+    WeightUnitSchema,
+    DimensionUnit,
+    DimensionUnitSchema,
+    CurrencyCode,
+    CurrencyCodeSchema,
+    parseCurrencyCode,
+    CarrierName,
+    CarrierNameSchema,
+    PackagingType,
+    PackagingTypeSchema,
+    LabelFormat,
+    LabelFormatSchema,
+};
 
 /**
  * Shipping address with full location details.
@@ -68,18 +82,6 @@ export interface PackageDimensions {
     /** Dimension measurement unit */
     readonly unit: DimensionUnit;
 }
-
-/**
- * Package type identifiers for common packaging options.
- */
-export type PackagingType =
-    | 'CUSTOM'
-    | 'LETTER'
-    | 'TUBE'
-    | 'PAK'
-    | 'SMALL_BOX'
-    | 'MEDIUM_BOX'
-    | 'LARGE_BOX';
 
 /**
  * Individual package details for shipment.
@@ -234,7 +236,7 @@ export interface LabelRequest {
     /** Selected carrier */
     readonly carrier: CarrierName;
     /** Label format preference */
-    readonly labelFormat?: 'PDF' | 'PNG' | 'ZPL';
+    readonly labelFormat?: LabelFormat;
 }
 
 /**
@@ -246,7 +248,7 @@ export interface LabelResponse {
     /** Base64-encoded label image */
     readonly labelData: string;
     /** Label format */
-    readonly labelFormat: 'PDF' | 'PNG' | 'ZPL';
+    readonly labelFormat: LabelFormat;
     /** Total cost for the label */
     readonly totalCost: MonetaryValue;
 }

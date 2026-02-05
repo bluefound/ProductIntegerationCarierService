@@ -11,6 +11,7 @@ import type {
     LabelRequest,
     LabelResponse,
 } from '../../domain/types.js';
+import { CarrierName } from '../../domain/types.js';
 import {
     NotImplementedError,
     ValidationError,
@@ -18,8 +19,9 @@ import {
 } from '../../errors/index.js';
 import type { OAuthService } from '../../services/oauth.service.js';
 import type { HttpClient } from '../../services/http-client.js';
-import { validateRateRequest, safeValidateRateRequest, zodErrorToFieldErrors } from '../../validation/schemas.js';
+import { RateRequestSchema } from '../../validation/schemas.js';
 import type { UPSRateResponse } from './types.js';
+import { UPSRateResponseSchema } from './response-schemas.js';
 import { toUPSRateRequest, fromUPSRateResponse } from './mapper.js';
 import { UPS_API_PATHS } from './constants.js';
 
@@ -33,25 +35,9 @@ export interface UPSCarrierConfig {
     readonly useNegotiatedRates?: boolean;
 }
 
-/**
- * UPS Carrier implementation.
- * 
- * @example
- * ```typescript
- * const upsCarrier = new UPSCarrier(httpClient, oauthService, {
- *   accountNumber: '123456',
- *   useNegotiatedRates: true,
- * });
- * 
- * const rates = await upsCarrier.rate({
- *   origin: { ... },
- *   destination: { ... },
- *   packages: [{ ... }],
- * });
- * ```
- */
+
 export class UPSCarrier implements ICarrier {
-    readonly name = 'UPS' as const;
+    readonly name = CarrierName.UPS;
 
     private readonly httpClient: HttpClient;
     private readonly oauthService: OAuthService;
@@ -85,11 +71,11 @@ export class UPSCarrier implements ICarrier {
      */
     async rate(request: RateRequest): Promise<RateResponse> {
         // Validate request
-        const validationResult = safeValidateRateRequest(request);
+        const validationResult = RateRequestSchema.safeParse(request);
         if (!validationResult.success) {
             throw new ValidationError(
                 'Invalid rate request',
-                zodErrorToFieldErrors(validationResult.error),
+                validationResult.error.flatten().fieldErrors,
                 { carrier: this.name }
             );
         }
@@ -107,19 +93,13 @@ export class UPSCarrier implements ICarrier {
         // Convert to UPS format
         const upsRequest = toUPSRateRequest(enrichedRequest, this.config.accountNumber);
 
-        // Make API request
+        // Make API request with response validation
         const upsResponse = await this.httpClient.post<UPSRateResponse>(
             UPS_API_PATHS.RATE_SHOP,
-            upsRequest
+            upsRequest,
+            {},
+            UPSRateResponseSchema
         );
-
-        // Validate response structure
-        if (!upsResponse.RateResponse?.RatedShipment) {
-            throw new CarrierApiError('Invalid response from UPS API: missing rated shipments', {
-                carrier: this.name,
-                responseBody: upsResponse,
-            });
-        }
 
         // Check for error status
         const responseStatus = upsResponse.RateResponse.Response.ResponseStatus;

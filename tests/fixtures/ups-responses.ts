@@ -4,6 +4,7 @@
  */
 
 import type { UPSRateResponse, UPSOAuthResponse } from '../../src/carriers/ups/types.js';
+import { WeightUnit, DimensionUnit, PackagingType } from '../../src/domain/enums.js';
 
 /**
  * Successful OAuth token response.
@@ -13,7 +14,7 @@ export const successfulOAuthResponse: UPSOAuthResponse = {
     issued_at: '1612345678901',
     client_id: 'test-client-id',
     access_token: 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ1cHMuY29tIiwiZXhwIjoxNjEyMzQ5Mjc4LCJpYXQiOjE2MTIzNDU2Nzh9.test-signature',
-    expires_in: '3600',
+    expires_in: 3600,
     status: 'approved',
 };
 
@@ -296,6 +297,8 @@ export const rateLimitErrorResponse = {
     },
 };
 
+
+
 /**
  * Valid rate request fixture for testing.
  */
@@ -319,15 +322,15 @@ export const validRateRequest = {
         {
             weight: {
                 value: 5.0,
-                unit: 'LB' as const,
+                unit: WeightUnit.LB,
             },
             dimensions: {
                 length: 10,
                 width: 8,
                 height: 6,
-                unit: 'IN' as const,
+                unit: DimensionUnit.IN,
             },
-            packagingType: 'CUSTOM' as const,
+            packagingType: PackagingType.CUSTOM,
         },
     ],
 };

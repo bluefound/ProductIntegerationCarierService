@@ -4,25 +4,14 @@
  */
 
 import { z } from 'zod';
-
-// =============================================================================
-// Enums and Constants
-// =============================================================================
-
-export const WeightUnitSchema = z.enum(['LB', 'KG']);
-export const DimensionUnitSchema = z.enum(['IN', 'CM']);
-export const CurrencyCodeSchema = z.enum(['USD', 'EUR', 'GBP', 'CAD']);
-export const CarrierNameSchema = z.enum(['UPS', 'FEDEX', 'USPS', 'DHL']);
-export const PackagingTypeSchema = z.enum([
-    'CUSTOM',
-    'LETTER',
-    'TUBE',
-    'PAK',
-    'SMALL_BOX',
-    'MEDIUM_BOX',
-    'LARGE_BOX',
-]);
-export const LabelFormatSchema = z.enum(['PDF', 'PNG', 'ZPL']);
+import {
+    WeightUnitSchema,
+    DimensionUnitSchema,
+    CurrencyCodeSchema,
+    CarrierNameSchema,
+    PackagingTypeSchema,
+    LabelFormatSchema,
+} from '../domain/enums.js';
 
 // =============================================================================
 // Address Schema
@@ -173,53 +162,9 @@ export type LabelRequestInput = z.infer<typeof LabelRequestSchema>;
 // Validation Helpers
 // =============================================================================
 
-/**
- * Validates a rate request and returns typed result.
- * @throws {z.ZodError} If validation fails
- */
-export function validateRateRequest(data: unknown): RateRequestInput {
-    return RateRequestSchema.parse(data);
-}
+// =============================================================================
+// Validation Helpers
+// =============================================================================
 
-/**
- * Validates a rate request safely without throwing.
- * @returns Validation result with success/error
- */
-export function safeValidateRateRequest(data: unknown): z.SafeParseReturnType<unknown, RateRequestInput> {
-    return RateRequestSchema.safeParse(data);
-}
+// No wrapper functions needed - use schemas directly with .parse() or .safeParse()
 
-/**
- * Validates an address and returns typed result.
- * @throws {z.ZodError} If validation fails
- */
-export function validateAddress(data: unknown): AddressInput {
-    return AddressSchema.parse(data);
-}
-
-/**
- * Validates a package and returns typed result.
- * @throws {z.ZodError} If validation fails
- */
-export function validatePackage(data: unknown): PackageInput {
-    return PackageSchema.parse(data);
-}
-
-/**
- * Converts Zod validation errors to a field-error map.
- */
-export function zodErrorToFieldErrors(error: z.ZodError): Record<string, string[]> {
-    const fieldErrors: Record<string, string[]> = {};
-
-    for (const issue of error.issues) {
-        const path = issue.path.join('.');
-        const key = path || '_root';
-
-        if (!fieldErrors[key]) {
-            fieldErrors[key] = [];
-        }
-        fieldErrors[key].push(issue.message);
-    }
-
-    return fieldErrors;
-}

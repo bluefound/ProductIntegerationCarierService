@@ -9,10 +9,8 @@ import {
     PackageWeightSchema,
     PackageDimensionsSchema,
     RateRequestSchema,
-    validateRateRequest,
-    safeValidateRateRequest,
-    zodErrorToFieldErrors,
 } from '../../src/validation/schemas.js';
+import { WeightUnit, DimensionUnit, PackagingType } from '../../src/domain/enums.js';
 
 describe('Address Validation', () => {
     const validAddress = {
@@ -178,9 +176,9 @@ describe('Package Validation', () => {
     const validPackage = {
         weight: {
             value: 5,
-            unit: 'LB' as const,
+            unit: WeightUnit.LB,
         },
-        packagingType: 'CUSTOM' as const,
+        packagingType: PackagingType.CUSTOM,
     };
 
     it('should accept valid package without dimensions', () => {
@@ -195,7 +193,7 @@ describe('Package Validation', () => {
                 length: 10,
                 width: 8,
                 height: 6,
-                unit: 'IN',
+                unit: DimensionUnit.IN,
             },
         });
         expect(result.success).toBe(true);
@@ -241,15 +239,15 @@ describe('Rate Request Validation', () => {
             {
                 weight: {
                     value: 5,
-                    unit: 'LB' as const,
+                    unit: WeightUnit.LB,
                 },
-                packagingType: 'CUSTOM' as const,
+                packagingType: PackagingType.CUSTOM,
             },
         ],
     };
 
     it('should accept valid rate request', () => {
-        const result = safeValidateRateRequest(validRateRequest);
+        const result = RateRequestSchema.safeParse(validRateRequest);
         expect(result.success).toBe(true);
     });
 
@@ -291,50 +289,5 @@ describe('Rate Request Validation', () => {
             packages: manyPackages,
         });
         expect(result.success).toBe(false);
-    });
-
-    describe('validateRateRequest()', () => {
-        it('should return parsed data for valid request', () => {
-            const result = validateRateRequest(validRateRequest);
-            expect(result.origin.city).toBe('Atlanta');
-        });
-
-        it('should throw for invalid request', () => {
-            expect(() =>
-                validateRateRequest({
-                    ...validRateRequest,
-                    packages: [],
-                })
-            ).toThrow();
-        });
-    });
-});
-
-describe('zodErrorToFieldErrors()', () => {
-    it('should convert Zod errors to field-error map', () => {
-        const result = RateRequestSchema.safeParse({
-            origin: {
-                addressLine1: '',
-                city: 'Atlanta',
-                stateProvinceCode: 'GA',
-                postalCode: '30328',
-                countryCode: 'USA', // Invalid
-            },
-            destination: {
-                addressLine1: '456 Test',
-                city: 'Test',
-                stateProvinceCode: 'CA',
-                postalCode: '90001',
-                countryCode: 'US',
-            },
-            packages: [],
-        });
-
-        expect(result.success).toBe(false);
-        if (!result.success) {
-            const fieldErrors = zodErrorToFieldErrors(result.error);
-            expect(fieldErrors).toBeDefined();
-            expect(Object.keys(fieldErrors).length).toBeGreaterThan(0);
-        }
     });
 });

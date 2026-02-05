@@ -3,7 +3,8 @@
  * Implements client credentials flow with token caching and refresh.
  */
 
-import type { AxiosInstance } from 'axios';
+import axios, { AxiosInstance } from 'axios';
+import { z } from 'zod';
 import { AuthenticationError } from '../errors/index.js';
 import type { CarrierName } from '../domain/types.js';
 
@@ -40,14 +41,16 @@ export interface OAuthServiceConfig {
 }
 
 /**
- * OAuth token response from the authorization server.
+ * OAuth token response schema to handle string/number expires_in.
  */
-interface TokenResponse {
-    access_token: string;
-    token_type: string;
-    expires_in: number;
-    scope?: string;
-}
+const TokenResponseSchema = z.object({
+    access_token: z.string(),
+    token_type: z.string(),
+    expires_in: z.union([z.string(), z.number()]).transform((val) =>
+        typeof val === 'string' ? parseInt(val, 10) : val
+    ),
+    scope: z.string().optional(),
+});
 
 /**
  * OAuth 2.0 service implementing client credentials flow with caching.
@@ -143,7 +146,7 @@ export class OAuthService {
                 `${this.config.clientId}:${this.config.clientSecret}`
             ).toString('base64');
 
-            const response = await this.httpClient.post<TokenResponse>(
+            const response = await this.httpClient.post(
                 this.config.tokenUrl,
                 'grant_type=client_credentials',
                 {
@@ -155,7 +158,19 @@ export class OAuthService {
                 }
             );
 
-            const token = this.parseTokenResponse(response.data);
+            // Use Zod to validate and strict parse the response
+            const result = TokenResponseSchema.safeParse(response.data);
+            if (!result.success) {
+                throw new AuthenticationError('Invalid OAuth response format', {
+                    carrier: this.config.carrier,
+                    context: {
+                        validationErrors: result.error.flatten(),
+                        responseData: response.data
+                    }
+                });
+            }
+
+            const token = this.parseTokenResponse(result.data);
             this.cachedToken = token;
 
             return token;
@@ -167,7 +182,7 @@ export class OAuthService {
     /**
      * Parse the token response into our OAuthToken structure.
      */
-    private parseTokenResponse(response: TokenResponse): OAuthToken {
+    private parseTokenResponse(response: z.infer<typeof TokenResponseSchema>): OAuthToken {
         const expiresAt = Date.now() + response.expires_in * 1000;
 
         return {
@@ -187,31 +202,38 @@ export class OAuthService {
         }
 
         // Handle Axios errors
-        if (this.isAxiosError(error)) {
+        if (axios.isAxiosError(error)) {
             const status = error.response?.status;
-            const data = error.response?.data as Record<string, unknown> | undefined;
+            const data = error.response?.data;
 
             if (status === 401) {
                 return new AuthenticationError('Invalid client credentials', {
                     carrier: this.config.carrier,
                     context: { responseData: data },
-                    cause: error as Error,
+                    cause: error,
                 });
             }
 
             if (status === 400) {
-                const errorDesc = data?.['error_description'] ?? data?.['error'] ?? 'Bad request';
-                return new AuthenticationError(`OAuth request failed: ${String(errorDesc)}`, {
+                // Safe extraction of error description
+                let errorDesc = 'Bad request';
+                if (data && typeof data === 'object') {
+                    const d = data as Record<string, unknown>;
+                    if (typeof d['error_description'] === 'string') errorDesc = d['error_description'];
+                    else if (typeof d['error'] === 'string') errorDesc = d['error'];
+                }
+
+                return new AuthenticationError(`OAuth request failed: ${errorDesc}`, {
                     carrier: this.config.carrier,
                     context: { responseData: data },
-                    cause: error as Error,
+                    cause: error,
                 });
             }
 
             return new AuthenticationError(`OAuth request failed with status ${status ?? 'unknown'}`, {
                 carrier: this.config.carrier,
                 context: { status, responseData: data },
-                cause: error as Error,
+                cause: error,
             });
         }
 
@@ -226,19 +248,5 @@ export class OAuthService {
         return new AuthenticationError('OAuth request failed with unknown error', {
             carrier: this.config.carrier,
         });
-    }
-
-    /**
-     * Type guard for Axios errors.
-     */
-    private isAxiosError(
-        error: unknown
-    ): error is { response?: { status?: number; data?: unknown }; message: string } {
-        return (
-            typeof error === 'object' &&
-            error !== null &&
-            'message' in error &&
-            typeof (error as { message: unknown }).message === 'string'
-        );
     }
 }
