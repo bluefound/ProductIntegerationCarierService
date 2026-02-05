@@ -1,8 +1,8 @@
 # Carrier Integration Service
 
-A production-grade TypeScript service for integrating with shipping carriers. Provides a unified interface for rate shopping, tracking, and label creation with an extensible architecture supporting multiple carriers.
+A production grade TypeScript service for integrating with shipping carriers. Provides a unified interface for rate shopping, tracking, and label creation with an extensible architecture supporting multiple carriers.
 
-## 🏗️ Architecture
+Architecture
 
 ```
 src/
@@ -25,15 +25,15 @@ src/
     └── index.ts         # Error hierarchy
 ```
 
-## 🎯 Key Design Decisions
+ Key Design Decisions
 
-### 1. Carrier Interface Pattern
+1. Carrier Interface Pattern
 All carriers implement the `ICarrier` interface, enabling:
 - Easy addition of new carriers (FedEx, USPS, DHL)
 - Rate shopping across multiple carriers
 - Consistent error handling
 
-```typescript
+typescript
 interface ICarrier {
   readonly name: CarrierName;
   rate(request: RateRequest): Promise<RateResponse>;
@@ -42,17 +42,17 @@ interface ICarrier {
 }
 ```
 
-### 2. Domain-Driven Types
+ 2. Domain-Driven Types
 Carrier-agnostic types that any carrier implementation must map to/from:
 - `RateRequest` / `RateResponse` - Standard rate shopping interface
 - `Address`, `Package`, `RateQuote` - Reusable domain models
 
-### 3. OAuth 2.0 with Token Caching
+3. OAuth 2.0 with Token Caching
 - In-memory token caching
 - Automatic refresh before expiry (5-minute buffer)
 - Thread-safe refresh (prevents concurrent token requests)
 
-### 4. Structured Error Handling
+4. Structured Error Handling
 ```typescript
 CarrierError          // Base class
 ├── AuthenticationError   // OAuth failures
@@ -63,24 +63,24 @@ CarrierError          // Base class
 └── NotImplementedError   // Planned features
 ```
 
-### 5. Zod Runtime Validation
+5. Zod Runtime Validation
 All requests are validated at runtime with detailed error messages:
 - Address validation (postal code format, country codes)
 - Package constraints (weight/dimension limits)
 - Request-level validation
 
-## 🚀 Getting Started
+
 
 ### Prerequisites
 - Node.js 18+
 - npm or yarn
 
-### Installation
+ Installation
 ```bash
 npm install
 ```
 
-### Configuration
+Configuration
 Copy `.env.example` to `.env` and configure:
 ```env
 UPS_CLIENT_ID=your_client_id
@@ -89,23 +89,22 @@ UPS_MERCHANT_ID=your_account_number
 UPS_BASE_URL=https://wwwcie.ups.com  # Sandbox
 ```
 
-### Build
+ Build
 ```bash
 npm run build
 ```
 
-### Run Tests
+Run Tests
 ```bash
 npm test                 # Run all tests
 npm run test:coverage    # With coverage report
 ```
 
-### Type Check
+ Type Check
 ```bash
 npm run type-check
 ```
 
-## 📖 Usage Example
 
 ```typescript
 import { UPSCarrier, HttpClient, OAuthService, ConfigService } from 'carrier-integration-service';
@@ -165,7 +164,7 @@ response.quotes.forEach(quote => {
 });
 ```
 
-## 🔌 Adding a New Carrier
+Adding a New Carrier
 
 1. Create carrier directory: `src/carriers/your-carrier/`
 2. Implement the `ICarrier` interface
@@ -186,7 +185,7 @@ export class FedExCarrier implements ICarrier {
 }
 ```
 
-## 🧪 Testing
+
 
 Tests are written using Vitest with mocked HTTP responses:
 
@@ -201,7 +200,7 @@ npm run test:coverage
 npm run test:watch
 ```
 
-### Test Categories
+
 - **Unit tests**: Validation schemas, mappers
 - **Integration tests**: Full carrier flow with mocked HTTP
 
@@ -220,6 +219,3 @@ Given more time, I would add:
 9. **Webhook Support**: Async tracking updates
 10. **Multi-package Optimization**: Rate shopping for multi-box shipments
 
-## 📄 License
-
-MIT
